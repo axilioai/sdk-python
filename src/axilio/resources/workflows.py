@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, Literal
 
-from ..types import NodeVariableInfo, WorkflowExecuteResponse, WorkflowVariablesResponse
+from ..types.runs import Run, RunStatus
+from ..types.workflows import (
+    NodeVariableInfo,
+    WorkflowExecuteResponse,
+    WorkflowVariablesResponse,
+)
 
 if TYPE_CHECKING:
     from .._http import HTTPClient
+
+# Terminal run statuses that indicate the run has finished
+_TERMINAL_STATUSES = {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED}
 
 
 class Workflows:
@@ -48,6 +57,7 @@ class Workflows:
         workflow_id: str,
         variables: dict[str, Any] | None = None,
         schedule_time: str | None = None,
+        count: int = 1,
     ) -> WorkflowExecuteResponse:
         """
         Execute a workflow run.
@@ -91,7 +101,7 @@ class Workflows:
         # Build request body
         is_scheduled = schedule_time is not None
         request_body = {
-            "numberOfRuns": 1,
+            "numberOfRuns": count,
             "runTime": {
                 "isImmediate": not is_scheduled,
                 "isScheduled": is_scheduled,
@@ -102,6 +112,82 @@ class Workflows:
 
         response = self._http.post(f"/api/v1/runs/{workflow_id}", json=request_body)
         return WorkflowExecuteResponse(run_ids=response["run_ids"])
+
+    def get_run(self, *, run_id: str) -> Run:
+        """
+        Get a run by ID.
+
+        Args:
+            run_id: The ID of the run.
+
+        Returns:
+            Run object with current status and details.
+
+        Example:
+            >>> run = client.workflows.get_run(run_id="run_abc123")
+            >>> print(f"Status: {run.status}")
+        """
+        response = self._http.get(f"/api/v1/runs/user/{run_id}")
+        return Run(**response)
+
+    def wait(
+        self,
+        *,
+        run_id: str,
+        poll_interval: float = 2.0,
+        timeout: float | None = None,
+    ) -> Run:
+        """
+        Wait for a run to complete by polling its status.
+
+        Polls the run status until it reaches a terminal state
+        (COMPLETED, FAILED, or CANCELLED).
+
+        Args:
+            run_id: The ID of the run to wait for.
+            poll_interval: Seconds between status checks (default: 2.0).
+            timeout: Maximum seconds to wait before raising TimeoutError.
+                    If None, waits indefinitely.
+
+        Returns:
+            Run object with final status and details.
+
+        Raises:
+            TimeoutError: If timeout is reached before run completes.
+
+        Example:
+            >>> # Execute and wait for completion
+            >>> result = client.workflows.execute(workflow_id="abc123")
+            >>> run = client.workflows.wait(run_id=result.run_ids[0])
+            >>> if run.status == RunStatus.COMPLETED:
+            ...     print("Workflow completed successfully!")
+            ... else:
+            ...     print(f"Workflow {run.status}: {run.error_message}")
+
+            >>> # With timeout
+            >>> try:
+            ...     run = client.workflows.wait(run_id="run_xyz", timeout=60.0)
+            ... except TimeoutError:
+            ...     print("Run did not complete within 60 seconds")
+        """
+        start_time = time.monotonic()
+
+        while True:
+            run = self.get_run(run_id=run_id)
+
+            if run.status in _TERMINAL_STATUSES:
+                return run
+
+            # Check timeout
+            if timeout is not None:
+                elapsed = time.monotonic() - start_time
+                if elapsed >= timeout:
+                    raise TimeoutError(
+                        f"Run {run_id} did not complete within {timeout} seconds. "
+                        f"Current status: {run.status}"
+                    )
+
+            time.sleep(poll_interval)
 
     def _detect_variable_type(
         self, value: Any

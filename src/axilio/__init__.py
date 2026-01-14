@@ -30,7 +30,13 @@ from .types import (
     Device,
     DeviceStatus,
     DeviceType,
-)
+    NodeVariableInfo,
+    Run,
+    RunStatus,
+    RunTrigger,
+    WorkflowExecuteResponse,
+    WorkflowVariablesResponse,
+)  # noqa: F401 - re-exported from types package
 
 __version__ = "0.1.0"
 
@@ -47,6 +53,8 @@ __all__ = [
     # Types - Enums
     "DeviceType",
     "DeviceStatus",
+    "RunStatus",
+    "RunTrigger",
     # Types - Models
     "Device",
     "AvailableDevicesResponse",
@@ -55,4 +63,8 @@ __all__ = [
     "ApiKey",
     "ApiKeyListResponse",
     "ApiKeyCreateResponse",
+    "Run",
+    "NodeVariableInfo",
+    "WorkflowExecuteResponse",
+    "WorkflowVariablesResponse",
 ]
