@@ -4,11 +4,14 @@ Axilio Python SDK
 A lightweight SDK for the Axilio mobile device automation platform.
 
 Usage:
-    >>> from axilio import Client
+    >>> from axilio import Client, RunConfig
     >>> client = Client(api_key="ax_live_...")
     >>>
-    >>> # List available devices
-    >>> devices = client.devices.list_available()
+    >>> # Execute a workflow
+    >>> result = client.workflows.execute(
+    ...     workflow_id="abc123",
+    ...     runs=[RunConfig(variables=[{"node_id": "value"}])]
+    ... )
 """
 
 from .client import Client
@@ -32,11 +35,12 @@ from .types import (
     DeviceType,
     NodeVariableInfo,
     Run,
+    RunConfig,
     RunStatus,
     RunTrigger,
     WorkflowExecuteResponse,
     WorkflowVariablesResponse,
-)  # noqa: F401 - re-exported from types package
+)
 
 __version__ = "0.1.0"
 
@@ -64,6 +68,7 @@ __all__ = [
     "ApiKeyListResponse",
     "ApiKeyCreateResponse",
     "Run",
+    "RunConfig",
     "NodeVariableInfo",
     "WorkflowExecuteResponse",
     "WorkflowVariablesResponse",

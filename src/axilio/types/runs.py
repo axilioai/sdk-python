@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -23,6 +24,21 @@ class RunTrigger(str, Enum):
 
     MANUAL = "manual"
     SCHEDULED = "scheduled"
+    API = "api"
+
+
+class RunConfig(BaseModel):
+    """Configuration for a single run.
+    
+    Each RunConfig represents one run's variable configuration.
+    Variables is a list with one dict keyed by nodeId, where values
+    are the raw values (string, number, boolean, array, object).
+    
+    Example:
+        >>> config = RunConfig(variables=[{"node_abc": "my_value"}])
+    """
+
+    variables: list[dict[str, Any]]
 
 
 class Run(BaseModel):
@@ -43,4 +59,3 @@ class Run(BaseModel):
     video_url: str | None = None
     create_date: datetime
     update_date: datetime
-

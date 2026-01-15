@@ -9,7 +9,7 @@ from .devices import (
     DeviceStatus,
     DeviceType,
 )
-from .runs import Run, RunStatus, RunTrigger
+from .runs import Run, RunConfig, RunStatus, RunTrigger
 from .workflows import NodeVariableInfo, WorkflowExecuteResponse, WorkflowVariablesResponse
 
 __all__ = [
@@ -31,6 +31,6 @@ __all__ = [
     # Runs
     "RunStatus",
     "RunTrigger",
+    "RunConfig",
     "Run",
 ]
-

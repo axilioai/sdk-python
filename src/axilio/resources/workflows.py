@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
-from ..types.runs import Run, RunStatus
+from ..types.runs import Run, RunConfig, RunStatus
 from ..types.workflows import (
     NodeVariableInfo,
     WorkflowExecuteResponse,
@@ -55,17 +55,15 @@ class Workflows:
         self,
         *,
         workflow_id: str,
-        variables: dict[str, Any] | None = None,
+        runs: list[RunConfig],
         schedule_time: str | None = None,
-        count: int = 1,
     ) -> WorkflowExecuteResponse:
         """
-        Execute a workflow run.
+        Execute workflow runs.
 
         Args:
             workflow_id: The ID of the workflow to execute.
-            variables: Optional dict mapping node_id to variable value.
-                       For nodes requiring input, provide the value as a string.
+            runs: List of RunConfig objects, each containing variables for one run.
             schedule_time: Optional ISO datetime string for scheduled execution.
                           If not provided, runs immediately.
 
@@ -73,41 +71,38 @@ class Workflows:
             WorkflowExecuteResponse containing the created run IDs.
 
         Example:
-            >>> # Run immediately with variables
+            >>> # Single run with variables
             >>> result = client.workflows.execute(
             ...     workflow_id="abc123",
-            ...     variables={"node_xyz": "my_username", "node_abc": "my_password"}
+            ...     runs=[RunConfig(variables=[{"node_xyz": "my_value"}])]
             ... )
             >>> print(f"Created run: {result.run_ids[0]}")
+
+            >>> # Multiple runs with different variables
+            >>> result = client.workflows.execute(
+            ...     workflow_id="abc123",
+            ...     runs=[
+            ...         RunConfig(variables=[{"node_xyz": "value1"}]),
+            ...         RunConfig(variables=[{"node_xyz": "value2"}]),
+            ...     ]
+            ... )
 
             >>> # Schedule for later
             >>> result = client.workflows.execute(
             ...     workflow_id="abc123",
-            ...     variables={"node_xyz": "value"},
+            ...     runs=[RunConfig(variables=[{"node_xyz": "value"}])],
             ...     schedule_time="2024-01-15T10:00:00"
             ... )
         """
-        # Build variable config for each node
-        variable_configs: dict[str, dict[str, Any]] = {}
-        if variables:
-            for node_id, value in variables.items():
-                variable_configs[node_id] = {
-                    "value": str(value),
-                    "type": self._detect_variable_type(value),
-                    "nodeId": node_id,
-                    "request_at_runtime": False,
-                }
-
-        # Build request body
         is_scheduled = schedule_time is not None
         request_body = {
-            "numberOfRuns": count,
+            "numberOfRuns": len(runs),
             "runTime": {
                 "isImmediate": not is_scheduled,
                 "isScheduled": is_scheduled,
                 "scheduleTime": schedule_time,
             },
-            "runs": [{"variables": [variable_configs] if variable_configs else [{}]}],
+            "runs": [run.model_dump() for run in runs],
         }
 
         response = self._http.post(f"/api/v1/runs/{workflow_id}", json=request_body)
@@ -157,7 +152,10 @@ class Workflows:
 
         Example:
             >>> # Execute and wait for completion
-            >>> result = client.workflows.execute(workflow_id="abc123")
+            >>> result = client.workflows.execute(
+            ...     workflow_id="abc123",
+            ...     runs=[RunConfig(variables=[{"node_id": "value"}])]
+            ... )
             >>> run = client.workflows.wait(run_id=result.run_ids[0])
             >>> if run.status == RunStatus.COMPLETED:
             ...     print("Workflow completed successfully!")
