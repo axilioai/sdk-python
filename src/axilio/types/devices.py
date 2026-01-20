@@ -21,7 +21,7 @@ class DeviceStatus(str, Enum):
 
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
-    MAINTENANCE = "MAINTAINENCE"
+    MAINTENANCE = "MAINTENANCE"
     SUSPENDED = "SUSPENDED"
 
 
